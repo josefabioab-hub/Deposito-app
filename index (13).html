@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onde está? Depósito</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#161a1d;--panel:#22282c;--ink:#f2ede4;--mute:#9aa3a8;--line:#343c41;--shelf:#3a4650;--plank:#c98a2c;--hit:#f2b705;--hit-ink:#161a1d;--ring:#e0562b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 Barlow,system-ui,Arial,sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px}
+h1,h2,h3{font-family:"Barlow Condensed",Arial,sans-serif;text-transform:uppercase;letter-spacing:.03em;margin:0}
+h1{font-size:42px;color:var(--hit)}
+h2{font-size:22px;margin:14px 0 8px;border-left:5px solid var(--hit);padding-left:10px}
+.sub{color:var(--mute);margin:4px 0 14px}
+#q{width:100%;font:inherit;font-size:18px;padding:13px 14px;border:2px solid var(--hit);border-radius:4px;background:var(--panel);color:var(--ink)}
+section,details{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin:14px 0}
+#res{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+#res button{display:grid;grid-template-columns:1fr auto;gap:0 10px;width:100%;text-align:left;font:inherit;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-left:6px solid var(--hit);border-radius:4px;padding:10px 12px;cursor:pointer}
+#res span{color:var(--mute);font-size:15px}
+#res em{grid-row:1/3;align-self:center;font-style:normal;color:var(--hit)}
+.empty{color:var(--mute)}
+.cols{display:grid;gap:8px}.c3{grid-template-columns:repeat(3,1fr)}.cr{grid-template-columns:repeat(auto-fill,minmax(80px,1fr))}
+.shelf{background:var(--shelf);border-radius:4px;padding:4px 4px 0;margin-bottom:8px}
+.shelf b{display:block;font:700 13px "Barlow Condensed",Arial,sans-serif;padding:0 4px 3px;text-transform:uppercase}
+.cell{display:flex;justify-content:space-between;width:100%;min-height:34px;padding:0 8px;background:transparent;color:var(--ink);border:0;border-bottom:3px solid var(--plank);font:inherit;font-size:13px;cursor:pointer}
+.cell.hit{background:var(--hit);color:var(--hit-ink);font-weight:700}
+.cell.on{outline:3px solid var(--ring)}
+.hint{color:var(--mute);font-size:14px}
+#msg{color:var(--ring);font-weight:600}
+.ed{display:flex;gap:6px;margin:0 0 8px}
+.ed button{font-size:13px;padding:5px 9px;border:1px dashed var(--mute);background:transparent;color:var(--ink);border-radius:4px}
+#cell ul{list-style:none;margin:8px 0;padding:0}
+#cell li{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}
+button{font-family:inherit}
+button.ghost,button.go,#cell li button{font-size:15px;border-radius:4px;padding:8px 12px;cursor:pointer;border:1px solid var(--hit);background:transparent;color:var(--hit)}
+button.go{background:var(--hit);color:var(--hit-ink);font-weight:700;width:100%;padding:12px;margin-top:10px}
+summary{font:700 18px "Barlow Condensed",Arial,sans-serif;cursor:pointer;text-transform:uppercase}
+.f{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.f label{display:grid;gap:3px;font-size:13px;color:var(--mute)}
+.f .w{grid-column:1/-1}
+.f input,.f select{font:inherit;padding:9px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+#qr{background:#fff;display:inline-block;padding:10px;border-radius:6px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<h1>Onde está?</h1>
+<p class="sub">Digite o nome do produto e veja em qual prateleira ele está.</p>
+<input id="q" type="search" placeholder="Ex.: teclado, mouse, cabo" autocomplete="off">
+<ul id="res"></ul>
+
+<section>
+<h2>Mapa do depósito</h2>
+<p id="msg" role="status"></p>
+<div id="map"></div>
+</section>
+<section id="cell"></section>
+
+<details><summary>Cadastrar produto</summary>
+<div class="f">
+<label class="w">Nome do produto<input id="n"></label>
+<label>Quantidade<input id="qn" type="number" min="1" value="1"></label>
+<label>Local<select id="z"><option value="sal">Salão</option><option value="fun">Fundos</option><option value="cim">Quarto de cima</option></select></label>
+<label id="cl">Corredor<select id="c"></select></label>
+<label><span id="pl">Prateleira</span><select id="p"></select></label>
+<label>Parte<select id="l"><option value="a">Em cima</option><option value="b">Embaixo</option></select></label>
+</div>
+<button class="go" id="save">Salvar produto</button>
+</details>
+
+<details id="admBox"><summary>Administrador</summary>
+<div id="lock"><p class="hint">Digite a senha para editar prateleiras e baixar o arquivo de dados atualizado.</p>
+<input id="pw" type="password" placeholder="Senha"><button class="go" id="unlock">Entrar</button></div>
+<div id="tools" hidden>
+<p class="hint">Adicione/remova prateleiras no mapa (aparecem botões + e −). Depois, baixe o arquivo e suba pelo GitHub Desktop.</p>
+<button class="go" id="dl">Baixar dados.json atualizado</button>
+</div>
+</details>
+
+<section>
+<h2>QR Code</h2>
+<p class="hint">Imprima e cole no depósito — aponta para esta página.</p>
+<div id="qr"></div>
+</section>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const ADMIN_PW='proativa2026';
+const Z={sal:{n:'Salão',w:'Prateleira'},fun:{n:'Fundos',w:'Parede'},cim:{n:'Quarto de cima',w:'Parede'}};
+const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const key=(z,c,p,l)=>[z,c,p,l].join('.');
+const K=i=>key(i.z,i.c,i.p,i.l);
+const addr=i=>Z[i.z].n+(i.c?', corredor '+i.c:'')+', '+Z[i.z].w.toLowerCase()+' '+i.p+', '+(i.l=='a'?'em cima':'embaixo');
+const addrK=k=>{const[z,c,p,l]=k.split('.');return addr({z,c:+c,p:+p,l})};
+let data={layout:{sal:[4,4,4],fun:4,cim:4},items:[]},q='',focus=null,admin=false,tm;
+const N=(z,c)=>z=='sal'?(data.layout.sal[c-1]||0):data.layout[z];
+const say=t=>{$('#msg').textContent=t;clearTimeout(tm);tm=setTimeout(()=>$('#msg').textContent='',6000)};
+
+function shelf(z,c,p,H,cnt){
+ let h=`<div class="shelf"><b>${Z[z].w} ${p}</b>`;
+ for(const l of['a','b']){const k=key(z,c,p,l);
+  h+=`<button class="cell${H.has(k)?' hit':''}${focus===k?' on':''}" data-k="${k}"><span>${l=='a'?'cima':'baixo'}</span><b>${cnt[k]||''}</b></button>`}
+ return h+'</div>'}
+const ed=(z,c)=>admin?`<div class="ed"><button data-sh="${z}.${c}.-1">− Remover</button><button data-sh="${z}.${c}.1">+ Adicionar</button></div>`:'';
+
+function drawMap(H,cnt){
+ let h='<h3>Salão</h3><div class="cols c3">';
+ data.layout.sal.forEach((n,i)=>{const c=i+1;h+=`<div><p class="hint">Corredor ${c}</p>`;for(let p=1;p<=n;p++)h+=shelf('sal',c,p,H,cnt);h+=ed('sal',c)+'</div>'});
+ h+='</div>';
+ for(const z of['fun','cim']){h+=`<h3>${Z[z].n}</h3>${ed(z,0)}<div class="cols cr">`;for(let p=1;p<=data.layout[z];p++)h+=`<div>${shelf(z,0,p,H,cnt)}</div>`;h+='</div>'}
+ $('#map').innerHTML=h}
+
+function cellPanel(){
+ const el=$('#cell');
+ if(!focus){el.innerHTML='<p class="hint">Toque numa prateleira do mapa para ver o que tem nela.</p>';return}
+ const L=data.items.filter(i=>K(i)===focus);
+ el.innerHTML=`<h2>${addrK(focus)}</h2>`+(L.length?'<ul>'+L.map((i,ix)=>`<li><span>${esc(i.n)} <em>${i.q} un.</em></span><button data-del="${data.items.indexOf(i)}">Remover</button></li>`).join(''):'<p class="hint">Nada guardado aqui.</p>')+`<button class="ghost" data-add="${focus}">Guardar produto aqui</button>`}
+
+function fillSel(){
+ const z=$('#z').value,s=z=='sal',cs=$('#c'),ps=$('#p'),cv=cs.value,pv=ps.value;
+ $('#cl').hidden=!s;$('#pl').textContent=Z[z].w;
+ cs.innerHTML=data.layout.sal.map((_,i)=>`<option>${i+1}</option>`).join('');
+ if(cv&&+cv<=data.layout.sal.length)cs.value=cv;
+ ps.innerHTML=Array.from({length:N(z,s?+cs.value||1:0)},(_,i)=>`<option>${i+1}</option>`).join('');
+ if(pv&&+pv<=ps.options.length)ps.value=pv}
+
+function render(){
+ const t=norm(q.trim());
+ const R=t?data.items.filter(i=>norm(i.n).includes(t)):[];
+ const H=new Set(R.map(K)),cnt={};
+ data.items.forEach(i=>cnt[K(i)]=(cnt[K(i)]||0)+1);
+ $('#res').innerHTML=t?(R.length?R.map(i=>`<li><button data-k="${K(i)}" data-r="1"><strong>${esc(i.n)}</strong><span>${addr(i)}</span><em>${i.q} un.</em></button></li>`).join(''):'<li class="empty">Nenhum produto encontrado.</li>'):'';
+ drawMap(H,cnt);cellPanel();fillSel()}
+
+function editShelf(z,c,d){
+ const n=N(z,c);
+ if(d<0){if(n<=1)return say('Precisa ficar pelo menos 1 prateleira.');
+  const k=data.items.filter(i=>i.z==z&&+i.c==c&&+i.p==n).length;
+  if(k)return say(`Ainda tem ${k} produto(s) nessa prateleira. Remova antes de apagar.`)}
+ else if(n>=12)return say('Máximo de 12 prateleiras aqui.');
+ if(z=='sal')data.layout.sal[c-1]+=d;else data.layout[z]+=d;
+ render()}
+
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.k){focus=b.dataset.k;render();(b.dataset.r?document.querySelector('.cell.on'):$('#cell')).scrollIntoView({block:'nearest'})}
+ else if(b.dataset.del!==undefined){data.items.splice(+b.dataset.del,1);render()}
+ else if(b.dataset.sh){const[z,c,d]=b.dataset.sh.split('.');editShelf(z,+c,+d)}
+ else if(b.dataset.add){const[z,c,p,l]=b.dataset.add.split('.');
+  $('#z').value=z;fillSel();$('#c').value=c!='0'?c:'1';fillSel();$('#p').value=p;$('#l').value=l;
+  document.querySelectorAll('details')[0].open=true}});
+$('#q').addEventListener('input',e=>{q=e.target.value;render()});
+$('#z').addEventListener('change',fillSel);
+$('#c').addEventListener('change',fillSel);
+$('#save').addEventListener('click',()=>{
+ const n=$('#n').value.trim();if(!n)return $('#n').focus();
+ const z=$('#z').value;
+ data.items.push({n,q:Math.max(1,+$('#qn').value||1),z,c:z=='sal'?+$('#c').value:0,p:+$('#p').value,l:$('#l').value});
+ $('#n').value='';$('#qn').value=1;render()});
+$('#unlock').addEventListener('click',()=>{
+ if($('#pw').value===ADMIN_PW){admin=true;$('#lock').hidden=true;$('#tools').hidden=false;render()}
+ else say('Senha incorreta.')});
+$('#dl').addEventListener('click',()=>{
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dados.json';a.click()});
+
+fetch('./dados.json').then(r=>r.json()).then(d=>{if(d&&d.layout&&d.items){data=d;render()}}).catch(()=>{}).finally(render);
+new QRCode($('#qr'),{text:location.href,width:160,height:160});
+</script>
+</body>
+</html>
